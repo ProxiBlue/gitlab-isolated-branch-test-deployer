@@ -44,6 +44,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return self.error_response()
 
         data_repository = data.get('repository', {}).get('url')
+	logger.debug("data_repository is  '%s'" % data_repository)
 	data_repository_name = data.get('repository', {}).get('name')
         data_user_name = data.get('user_name',{})
         logger.debug("Username '%s'" % data_user_name)
@@ -89,7 +90,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
     def update_branch(self, branch, repository, emailto, data_repository_name):
-        branch_path = os.path.join(branch_dir, branch.replace('_', '-').lower())
+        logger.debug("REPOSITORY '%s'" % repository)
+	branch_path = os.path.join(branch_dir, branch.replace('_', '-').lower())
         if not os.path.isdir(branch_path):
             return self.add_branch(branch, repository, emailto, data_repository_name)
         os.chdir(branch_path)
@@ -100,20 +102,18 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         logger.debug("Updated branch '%s'" % branch_path)
 
     def remove_branch(self, branch, data_repository_name):
-        dbname.replace('_', '-').lower()
+        dbname = branch.replace('_', '-').lower()
 	branch_path = os.path.join(branch_dir, branch.replace('_', '-').lower())
         if not os.path.isdir(branch_path):
             logger.warn("Directory to remove does not exist: %s" % branch_path)
             return
         try:
             shutil.rmtree(branch_path)
-            self.drop_database(branch)
+            self.drop_database(dbname, data_repository_name)
         except (OSError, IOError), e:
             logger.exception("Error removing directory '%s'" % branch_path)
         else:
             logger.debug("Removed directory '%s'" % branch_path)
-
-	self.drop_database(dbname, data_repository_name)
 	return
 
     def ok_response(self):
@@ -167,13 +167,16 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	logger.debug("Creating database '%s'" % dbname)
         db_connection = MySQLdb.connect(host=config.get("mysql", "server"), user=config.get("mysql", "user"), passwd=config.get("mysql", "password"))
         cursor = db_connection.cursor()
-        cursor.execute('CREATE DATABASE IF NOT EXISTS %s;' % dbname)
-        db_connection.close()
-        #importing the source must be a forked process, as it takes too long
-        logger.debug('Attempting to run sub-process for importing')
-        p = Process(target=self.importsourcesql, args=(dbname,emailto,))
-        p.start()
-	return
+        try:
+	    cursor.execute('CREATE DATABASE IF NOT EXISTS %s;' % dbname)
+	    #importing the source must be a forked process, as it takes too long
+	    logger.debug('Attempting to run sub-process for importing')
+	    p = Process(target=self.importsourcesql, args=(dbname,emailto,))
+	    p.start()
+	except Exception, e:
+	    logger.debug("Creating database failed '%s'" % e)
+	db_connection.close()
+        return
 
     def drop_database(self, dbname, data_repository_name):
         dbname = data_repository_name + "_" + dbname
@@ -365,4 +368,4 @@ if __name__ == '__main__':
 	else:
 	    print "Could not read the config file '%s'" % configfile
     else:
-	print "usage: %s start|stop|restart [--config path_to_config_file]" % sys.argv[0]
+	print "usage: %s start|stop|restart [path_to_config_file]" % sys.argv[0]

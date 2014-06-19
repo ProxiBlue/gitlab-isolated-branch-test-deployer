@@ -16,24 +16,25 @@ Tested and verified to work with Python 2.7.
 
 ```$ ./gitlab-webhook.py start|stop|restart [config file to use]```
 
-This will run the process and listen on the configured port for POST requests from Gitlab that correspond to the repository.
-When it receives a request, it will clone the branches that were indicated as having been updated to the directory configured in the config file
-A database will be imported (as a forked process) using the source db dumpfile indicated from the config file.
-After import is done, an email will be sent to the branch owner email that the import is done
-A symlink will be created to the branch for the site media to a common media folder as per settings in config
-Use a defined source local.xml config file to set the database connection details. This will be copied to be local.xml in the app/etc folder of the new branch
-In the source local.xml config use ```<dbname><![CDATA[{{DATABASENAME}}]]></dbname>``` for the dbname which will then be set to the created database
+ This will run the process and listen on the configured port for POST requests from Gitlab that correspond to the repository.
+ When it receives a request, it will clone the branches that were indicated as having been updated to the directory configured in the config file
+ A database will be imported (as a forked process) using the source db dumpfile indicated from the config file.
+ After import is done, an email will be sent to the branch owner email that the import is done
+ A symlink will be created to the branch for the site media to a common media folder as per settings in config
+ Use a defined source local.xml config file to set the database connection details. This will be copied to be local.xml in the app/etc folder of the new branch
+ In the source local.xml config use ```<dbname><![CDATA[{{DATABASENAME}}]]></dbname>``` for the dbname which will then be set to the created database
 
 
 It will ignore any branch with a '/' in it's name. This is intentional, to allow for feature branches or similar that will not be cloned.
 
-```NOTE```
+NOTE
 a config file must be placed to read settings from
 The config file contains mysql password, thus must be placed with permissions for root user to read file only
 importer will start as root user, read config, then fork as defined user in config file. Actual daemon does not run as root.
 
 example of config
 
+```
 general]
 branch_dir = /var/www/testing/
 port = 8000
@@ -62,7 +63,7 @@ from=[USER TO SEND EMAIL AS]
 [logging]
 level = DEBUG
 file = /var/log/gitlab_branch_server.log
-
+```
 
 ### Acknowledgements
 
